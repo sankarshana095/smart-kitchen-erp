@@ -1,0 +1,109 @@
+datasource db {
+  provider  = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  STORE_MANAGER
+  KITCHEN_STAFF
+  VIEWER
+}
+
+enum TransactionType {
+  STOCK_IN
+  STOCK_OUT
+  COOKING
+  WASTAGE
+}
+
+model User {
+  id               String             @id @default(uuid())
+  email            String             @unique
+  password         String
+  name             String
+  role             Role               @default(VIEWER)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  transactions     StockTransaction[]
+  cookingHistory   CookingHistory[]
+  reports          Report[]
+}
+
+model Ingredient {
+  id              String             @id @default(uuid())
+  name            String             @unique
+  stock           Float              @default(0)
+  unit            String
+  minStock        Float              @default(0)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  dishIngredients DishIngredient[]
+  transactions    StockTransaction[]
+}
+
+model Dish {
+  id              String             @id @default(uuid())
+  name            String             @unique
+  description     String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  ingredients     DishIngredient[]
+  cookingHistory   CookingHistory[]
+}
+
+model DishIngredient {
+  id                 String     @id @default(uuid())
+  dishId             String
+  dish               Dish       @relation(fields: [dishId], references: [id], onDelete: Cascade)
+  ingredientId       String
+  ingredient         Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  quantityPerPerson  Float // Quantity required for 1 person
+
+  @@unique([dishId, ingredientId])
+}
+
+model StockTransaction {
+  id           String          @id @default(uuid())
+  ingredientId String
+  ingredient   Ingredient      @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  quantity     Float // positive for IN, negative for OUT
+  type         TransactionType
+  reason       String?
+  userId       String?
+  user         User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt    DateTime        @default(now())
+}
+
+model CookingHistory {
+  id             String      @id @default(uuid())
+  dishId         String
+  dish           Dish        @relation(fields: [dishId], references: [id], onDelete: Cascade)
+  peopleCount    Int
+  userId         String?
+  user           User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt      DateTime    @default(now())
+  ingredientsUsed Json?       // Snapshot of what was used
+}
+
+model Report {
+  id        String   @id @default(uuid())
+  title     String
+  type      String   // e.g., DAILY_COOKING, INVENTORY, TRANSACTION, USAGE, MONTHLY
+  content   Json
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  title     String
+  message   String
+  type      String   // LOW_STOCK, INSUFFICIENT_STOCK, GENERAL
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
