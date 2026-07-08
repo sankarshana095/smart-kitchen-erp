@@ -9,12 +9,6 @@ if (!connectionString) {
   throw new Error('DATABASE_URL is not defined in environment variables');
 }
 
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: connectionString,
-    },
-  },
-});
+const prisma = new PrismaClient();
 
 module.exports = prisma;
